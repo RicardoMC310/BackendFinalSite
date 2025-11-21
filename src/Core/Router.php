@@ -70,10 +70,11 @@ class Router {
             $request = [
                 "get" => $_GET,
                 "post" => $_POST,
-                "body" => file_get_contents("php://input"),
+                "body" => json_decode(file_get_contents("php://input"), true),
                 "header" => getallheaders(),
                 "method" => $method,
-                "path" => $path
+                "path" => $path,
+                "files" => $_FILES,
             ];
 
             $controllerInstance->$methodName($request);
