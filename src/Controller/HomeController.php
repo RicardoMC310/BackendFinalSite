@@ -77,9 +77,74 @@ class HomeController
             $stmt->execute([$get["id"]]);
 
             Response::json("item deletado com sucesso", 200);
-
         } catch (PDOException $th) {
             Response::json("erro ao deletar dados", 500, [
+                "error" => Database::sanitizeError($th)
+            ]);
+        }
+    }
+
+    public function buy(array $request)
+    {
+        $body = $request["body"];
+
+        try {
+            $stmt = $this->db->prepare("SELECT quantity FROM guitars WHERE id = ?");
+            $stmt->execute([$body["id"]]);
+
+            $result = $stmt->fetch();
+
+            if (!$result) {
+                Response::json("");
+            }
+
+            if ($body["quantity"] < 0 || $body["quantity"] > $result["quantity"]) {
+                Response::json("quantidade não pode ser menor que 0 nem maior que {$result["quantity"]}", 400);
+            }
+
+            $newQuantity = $result["quantity"] - $body["quantity"];
+
+            $stmt = $this->db->prepare("UPDATE guitars SET quantity = ? WHERE id = ?");
+            $stmt->execute([$newQuantity, $body["id"]]);
+
+            Response::json("venda ocorrida com sucesso", 200, [
+                "newQuantity" => $newQuantity
+            ]);
+        } catch (PDOException $th) {
+            Response::json("erro ao vender do estoque", 500, [
+                "error" => Database::sanitizeError($th)
+            ]);
+        }
+    }
+
+    public function purchase(array $request)
+    {
+        $body = $request["body"];
+
+        try {
+            $stmt = $this->db->prepare("SELECT quantity FROM guitars WHERE id = ?");
+            $stmt->execute([$body["id"]]);
+
+            $result = $stmt->fetch();
+
+            if (!$result) {
+                Response::json("");
+            }
+
+            if ($body["quantity"] < 0) {
+                Response::json("quantidade não pode ser menor que 0", 400);
+            }
+
+            $newQuantity = $result["quantity"] + $body["quantity"];
+
+            $stmt = $this->db->prepare("UPDATE guitars SET quantity = ? WHERE id = ?");
+            $stmt->execute([$newQuantity, $body["id"]]);
+
+            Response::json("venda ocorrida com sucesso", 200, [
+                "newQuantity" => $newQuantity
+            ]);
+        } catch (PDOException $th) {
+            Response::json("erro ao comprar para o estoque", 500, [
                 "error" => Database::sanitizeError($th)
             ]);
         }
@@ -138,7 +203,8 @@ class HomeController
         return $newName;
     }
 
-    private function deleteImage(string $filename) {
+    private function deleteImage(string $filename)
+    {
         $path = __DIR__ . "/../Uploads/" . $filename;
 
         if (file_exists($path)) {
